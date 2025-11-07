@@ -86,13 +86,33 @@ This will:
 - Save index as `*.pkl` files
 - Estimated time: 2-5 minutes (depending on machine)
 
-### 4. Launch Web UI
+### 4. Launch Application
+
+You can run the application in three modes:
+
+#### Option A: Web UI (Streamlit)
 
 ```bash
 streamlit run app.py
 ```
 
 The application will automatically open in your browser at: `http://localhost:8501`
+
+#### Option B: REST API Service
+
+```bash
+python api.py
+```
+
+The API server will start at: `http://localhost:8000`
+- API Documentation (Swagger UI): `http://localhost:8000/docs`
+- Alternative Documentation (ReDoc): `http://localhost:8000/redoc`
+
+#### Option C: CLI (Command Line)
+
+```bash
+python chatbot.py
+```
 
 ### 5. Run Evaluation (Optional)
 
@@ -107,15 +127,17 @@ This will run a series of test queries and generate performance reports.
 ```
 ai_chatbot/
 ├── app.py                          # Streamlit Web UI
+├── api.py                          # FastAPI REST API service
 ├── chatbot.py                      # RAG chatbot core logic
 ├── indexer.py                      # Data indexer
 ├── evaluation.py                   # Evaluation script
+├── test_api_client.py              # API test client
 ├── requirements.txt                # Python dependencies
 ├── README.md                       # This file (English)
 ├── README_CN.md                    # Chinese version
 ├── Task.md                         # Task description
 ├── prompt.txt                      # Development notes
-├── test_api.py                     # API test script
+├── test_huggingface_api.py         # HuggingFace API test script
 ├── us_recruiting_trials_*.json     # Clinical trials data
 ├── bm25_index.pkl                  # BM25 index (generated)
 ├── tokenized_corpus.pkl            # Tokenized corpus (generated)
@@ -134,6 +156,53 @@ ai_chatbot/
 
 3. View AI assistant's answer, source citations, and performance metrics
 
+### API Usage
+
+#### Using Python (requests)
+
+```python
+import requests
+
+# Chat query
+response = requests.post(
+    "http://localhost:8000/chat",
+    json={
+        "query": "Are there any clinical trials for PTSD?",
+        "n_results": 5
+    }
+)
+
+result = response.json()
+print("Answer:", result['answer'])
+print("Sources:", result['sources'])
+print("Timing:", result['timing'])
+```
+
+#### Using cURL
+
+```bash
+# Health check
+curl http://localhost:8000/health
+
+# Chat query
+curl -X POST http://localhost:8000/chat \
+  -H "Content-Type: application/json" \
+  -d '{"query": "Are there any clinical trials for PTSD?", "n_results": 5}'
+
+# Get statistics
+curl http://localhost:8000/stats
+```
+
+#### Using the test client
+
+```bash
+# Run test queries
+python test_api_client.py
+
+# Show cURL examples
+python test_api_client.py --curl
+```
+
 ### CLI Usage
 
 ```python
@@ -151,20 +220,75 @@ print("Sources:", result['sources'])
 print("Timing:", result['timing'])
 ```
 
+## 🌐 API Documentation
+
+### API Endpoints
+
+The REST API provides the following endpoints:
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/` | GET | Root endpoint with API information |
+| `/health` | GET | Health check endpoint |
+| `/chat` | POST | Main chat endpoint for queries |
+| `/stats` | GET | Get chatbot statistics |
+| `/reset-stats` | POST | Reset chatbot statistics |
+| `/docs` | GET | Interactive API documentation (Swagger UI) |
+| `/redoc` | GET | Alternative API documentation (ReDoc) |
+
+### Request/Response Models
+
+#### Chat Request
+
+```json
+{
+  "query": "Are there any clinical trials for PTSD?",
+  "n_results": 5
+}
+```
+
+#### Chat Response
+
+```json
+{
+  "success": true,
+  "query": "Are there any clinical trials for PTSD?",
+  "answer": "Yes, there are clinical trials for PTSD...",
+  "sources": [
+    {
+      "NCTId": "NCT05812131",
+      "Title": "COPEWeb Training for Providers",
+      "Score": "15.23",
+      "Relevance": "100.0%"
+    }
+  ],
+  "timing": {
+    "retrieval_time": "0.123s",
+    "api_time": "1.456s",
+    "total_time": "1.579s"
+  },
+  "timestamp": 1234567890.123
+}
+```
+
 ## 🔧 Technology Stack
 
 ### Core Technologies
 - **Retrieval**: BM25 Algorithm
 - **Generation**: HuggingFace API (Llama 3.2-1B-Instruct)
 - **UI**: Streamlit
+- **API**: FastAPI
 
 ### Dependencies
 - `openai==1.54.5` - OpenAI API compatible client
-- `httpx<0.28` - HTTP client
+- `httpx==0.27.2` - HTTP client
 - `streamlit==1.39.0` - Web UI framework
 - `rank-bm25==0.2.2` - BM25 algorithm implementation
 - `pandas==2.2.3` - Data processing
 - `numpy==1.26.4` - Numerical computation
+- `fastapi==0.115.5` - REST API framework
+- `uvicorn==0.32.1` - ASGI server
+- `pydantic==2.10.3` - Data validation
 
 ## 📊 Performance Metrics
 
